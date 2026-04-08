@@ -5,6 +5,20 @@ import json
 HOST = "127.0.0.1"
 PORT = 5000
 
+temporaryDoctors = {"Jane doe", "John Doe", "Sarah Smith"}
+temporaryMonths = {"May", "June", "July"}
+temporaryDays = {"1", "2", "3", "4", "5"}
+temporaryTimeSlots = {
+    "08:00": None,
+    "10:00": {
+        "name": "John Doe",
+        "reason": "skin turned pink"
+    },
+    "12:00": None,
+    "14:00": None,
+    "16:00": None
+}
+
 def startServer():
 
     #creatign the server socket
