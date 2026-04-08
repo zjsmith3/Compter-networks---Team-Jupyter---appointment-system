@@ -81,8 +81,41 @@ def receiveJson(clientSocket):
     message = data.decode().strip()
     return json.loads(message)
 
-def startState(clientSocket, session):
-    print("temp")
+def startState(clientSocket, session, status="OK"):
+
+    #determining prompt based off status.
+    if status == "INPUT_ERROR":
+        prompt = "Input invalid, try again. What would you like to do?"
+    else:
+        prompt = "Welcome, what would you like to do?"
+
+    #send the info for this stage
+    sendJson(clientSocket, messageFile= {
+        "status": status, 
+        "state": "START",
+        "prompt": prompt,
+        "options": {1: "Book Appointment", 2: "Exit"}
+    })
+
+    #get response
+    request = receiveJson(clientSocket)
+
+    #if the client doesn't respond, assume to exit for safety reasons
+    if request == None:
+        session["state"] = "EXIT"
+        return
+
+    #this makes the variable choice the client's response.
+    choice = request.get("choice")
+
+    if choice == 1:
+        session["state"] = "DOCTOR"
+    elif choice == 2:
+        session["state"] = "EXIT"
+    else:
+        startState(clientSocket, session, status="INPUT_ERROR")
+
+
 
 
 def chooseDoctor(clientSocket, session):
