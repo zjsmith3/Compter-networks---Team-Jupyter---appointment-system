@@ -2,14 +2,14 @@ import socket
 import threading
 import json
 
-# this is a mutex lock (learned about it in operating systems). It's the tool used to stop race conditions.
+#this is a mutex lock (learned about it in operating systems). It's the tool used to stop race conditions.
 bookingLock = threading.Lock()
 
 HOST = "127.0.0.1"
 PORT = 5000
 
-temporaryDoctors = ["Jane Doe", "John Doe", "Sarah Smith"]
-temporaryMonths = ["May", "June", "July"]
+temporaryDoctors = ["Jane doe", "John Doe", "Sarah Smith"]
+temporaryMonths = ["April", "May", "June", "July"]
 temporaryDays = [str(i) for i in range(1, 31)]
 temporaryTimeSlots = ["08:00", "10:00", "12:00"]
 
@@ -29,38 +29,44 @@ temporarySymptoms = [
 ]
 
 def startServer():
-    # creating the server socket
+    #This creates the server socket
     serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    # this piece of code makes restarting the server easier for testing purposes.
+    #this piece of code makes restarting the server a lot easier for testing purposes.
     serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-    # binding and starting the listen.
+    #binding and starting the listen for the server
     serverSocket.bind((HOST, PORT))
     serverSocket.listen()
 
     print("The server is now listening")
 
     while True:
-        # creating a variable that is the client upon an acceptance.
+        #accepts clients and creates variables for them. 
         clientSocket, clientAddress = serverSocket.accept()
 
-        # this creates a thread that essentially runs the server
+        #this will create the thread of the accepted client. 
         clientThread = threading.Thread(
             target=handleClient,
             args=(clientSocket, clientAddress)
         )
-        clientThread.daemon = True
         clientThread.start()
 
 def handleClient(clientSocket, clientAddress):
     session = {
-        "state": "START",  # the state the client is currently in
-        "selectedSymptom": None,  # memory spot for chosen symptom
-        "priority": None,  # memory spot for patient's priority
+        "state": "START",  #the state the client is currently in
+        "selectedSymptom": None,  #memory spot for chosen symptom
+        "priority": None,  #memory spot for patient's priority
         "selectedDoctor": None,  # memory spot for chosen doctor for fetch function purposes
-        "selectedMonth": None,  # memory spot for chosen month for fetch function purposes
-        "selectedDay": None  # memory spot for chosen day for fetch function purposes
+        "selectedMonth": None,  #memory spot for chosen month for fetch function purposes
+        "selectedDate": None  #memory spot for chosen day for fetch function purposes
+    }
+    session = {
+        "state": "START",  #the state the client is currently in
+        "selectedDoctor": None,  #memory spot for chosen doctor for fetch function purposes
+        "selectedMonth": None,  #memory spot for chosen month for fetch function purposes
+        "selectedDay": None #memory spot for chosen date for fetch function purposes
+        
     }
 
     try:
@@ -88,12 +94,12 @@ def handleClient(clientSocket, clientAddress):
     finally:
         clientSocket.close()
 
-# This is a function used for sending json files to the client
+#This is a function used for sending json files to the client
 def sendJson(clientSocket, messageFile):
     message = json.dumps(messageFile) + "\n"
     clientSocket.sendall(message.encode())
 
-# and this function is for receiving messages
+#and this function is for receiving messages
 def receiveJson(clientSocket):
     data = b""
 
@@ -108,33 +114,33 @@ def receiveJson(clientSocket):
     return json.loads(message)
 
 def startState(clientSocket, session, status="OK"):
+
     # determining prompt based off status.
     if status == "INPUT_ERROR":
         prompt = "Input invalid, try again. What would you like to do?"
     else:
         prompt = "Welcome, what would you like to do?"
 
-    # send the info for this stage
+    #send the info for this stage
     sendJson(clientSocket, {
         "status": status,
         "state": "START",
         "prompt": prompt,
         "options": [
             {"id": 1, "name": "Book Appointment"},
-            {"id": 2, "name": "Exit"}
-        ],
+            {"id": 2, "name": "Exit"}],
         "back": False
     })
 
-    # get response
+    #get response
     request = receiveJson(clientSocket)
 
-    # if the client doesn't respond, assume to exit for safety reasons
-    if request is None:
+    #if the client doesn't respond, assume to exit for safety reasons
+    if request == None:
         session["state"] = "EXIT"
         return
 
-    # this makes the variable choice the client's response.
+    #this makes the variable choice the client's response.
     choice = request.get("choice")
 
     if choice == 1:
@@ -147,7 +153,7 @@ def startState(clientSocket, session, status="OK"):
 def chooseSymptom(clientSocket, session, status="OK"):
     symptoms = temporarySymptoms
 
-    # gonna take the list, and append the list to have numbers for choosing.
+    #gonna take the list, and append the list to have numbers for choosing. 
     options = []
     for i, symptom in enumerate(symptoms, start=1):
         options.append({
@@ -155,13 +161,13 @@ def chooseSymptom(clientSocket, session, status="OK"):
             "name": symptom["name"]
         })
 
-    # determining prompt based off status.
+    #determining prompt based off status.
     if status == "INPUT_ERROR":
         prompt = "Input invalid, try again. Choose the option closest to what you are experiencing."
     else:
         prompt = "Choose the option closest to what you are experiencing."
 
-    # send the info for this stage
+    #send the info for this stage
     sendJson(clientSocket, {
         "status": status,
         "state": "SYMPTOM",
@@ -170,7 +176,7 @@ def chooseSymptom(clientSocket, session, status="OK"):
         "back": True
     })
 
-    # get response
+    #get response
     request = receiveJson(clientSocket)
 
     # if the client doesn't respond, assume to exit for safety reasons
@@ -178,12 +184,12 @@ def chooseSymptom(clientSocket, session, status="OK"):
         session["state"] = "EXIT"
         return
 
-    # this is for if the client wants to go back a step
+    #this is for if the client wants to go back a step
     if request.get("action") == "BACK":
         session["state"] = "START"
         return
 
-    # this makes the variable choice the client's response.
+    #this makes the variable choice the client's response.
     choice = request.get("choice")
 
     if not isinstance(choice, int):
@@ -200,10 +206,10 @@ def chooseSymptom(clientSocket, session, status="OK"):
     chooseSymptom(clientSocket, session, status="INPUT_ERROR")
 
 def chooseDoctor(clientSocket, session, status="OK"):
-    # this will be where the fetch function for the list of doctors will happen, for now I use temp list
+    #this will be where the fetch function for the list of doctors will happen, for now I use temp list
     doctors = temporaryDoctors
 
-    # gonna take the list, and append the list to have numbers for choosing.
+    #gonna take the list, and append the list to have numbers for choosing.
     options = []
     for i, doctor in enumerate(doctors, start=1):
         options.append({
@@ -211,13 +217,13 @@ def chooseDoctor(clientSocket, session, status="OK"):
             "name": doctor
         })
 
-    # determining prompt based off status.
+    #determining prompt based off status.
     if status == "INPUT_ERROR":
         prompt = "Input invalid, try again. Choose a doctor"
     else:
         prompt = "Choose a doctor"
 
-    # send the info for this stage
+    #send the info for this stage
     sendJson(clientSocket, {
         "status": status,
         "state": "DOCTOR",
@@ -226,20 +232,20 @@ def chooseDoctor(clientSocket, session, status="OK"):
         "back": True
     })
 
-    # get response
+    #get response
     request = receiveJson(clientSocket)
 
-    # if the client doesn't respond, assume to exit for safety reasons
+    #if the client doesn't respond, assume to exit for safety reasons
     if request is None:
         session["state"] = "EXIT"
         return
 
-    # this is for if the client wants to go back a step
+    #this is for if the client wants to go back a step
     if request.get("action") == "BACK":
         session["state"] = "SYMPTOM"
         return
 
-    # this makes the variable choice the client's response.
+    #this makes the variable choice the client's response.
     choice = request.get("choice")
 
     if not isinstance(choice, int):
@@ -253,7 +259,7 @@ def chooseDoctor(clientSocket, session, status="OK"):
         # priority 3 patients skip month/day and go straight to today
         if session.get("priority") == 3:
             session["selectedMonth"] = temporaryMonths[0]
-            session["selectedDay"] = temporaryDays[0]
+            session["selectedDate"] = temporaryDays[0]
             session["state"] = "TIME"
         else:
             session["state"] = "MONTH"
@@ -262,14 +268,14 @@ def chooseDoctor(clientSocket, session, status="OK"):
     chooseDoctor(clientSocket, session, status="INPUT_ERROR")
 
 def chooseMonth(clientSocket, session, status="OK"):
-    # this will be where the fetch function for the list of months will happen, for now I use temp list
+    #this will be where the fetch function for the list of months will happen, for now I use temp list
     months = temporaryMonths
 
-    # priority 1 patients must book at least a month out
+    #priority 1 patients must book at least a month out
     if session.get("priority") == 1:
         months = months[1:]
 
-    # gonna take the list, and append the list to have numbers for choosing.
+    #gonna take the list, and append the list to have numbers for choosing.
     options = []
     for i, month in enumerate(months, start=1):
         options.append({
@@ -286,7 +292,7 @@ def chooseMonth(clientSocket, session, status="OK"):
         else:
             prompt = "Choose a month"
 
-    # send the info for this stage
+    #send the info for this stage
     sendJson(clientSocket, {
         "status": status,
         "state": "MONTH",
@@ -295,7 +301,7 @@ def chooseMonth(clientSocket, session, status="OK"):
         "back": True
     })
 
-    # get response
+    #get response
     request = receiveJson(clientSocket)
 
     # if the client doesn't respond, assume to exit for safety reasons
@@ -303,12 +309,12 @@ def chooseMonth(clientSocket, session, status="OK"):
         session["state"] = "EXIT"
         return
 
-    # this is for if the client wants to go back a step
+    #this is for if the client wants to go back a step
     if request.get("action") == "BACK":
         session["state"] = "DOCTOR"
         return
 
-    # this makes the variable choice the client's response.
+    #this makes the variable choice the client's response.
     choice = request.get("choice")
 
     if not isinstance(choice, int):
@@ -324,10 +330,10 @@ def chooseMonth(clientSocket, session, status="OK"):
     chooseMonth(clientSocket, session, status="INPUT_ERROR")
 
 def chooseDay(clientSocket, session, status="OK"):
-    # this will be where the fetch function for the list of days will happen, for now I use temp list
+    #this will be where the fetch function for the list of days will happen, for now I use temp list
     days = temporaryDays
 
-    # gonna take the list, and append the list to have numbers for choosing.
+    #gonna take the list, and append the list to have numbers for choosing.
     options = []
     for i, day in enumerate(days, start=1):
         options.append({
@@ -335,13 +341,13 @@ def chooseDay(clientSocket, session, status="OK"):
             "name": day
         })
 
-    # determining prompt based off status.
+    #determining prompt based off status.
     if status == "INPUT_ERROR":
         prompt = "Input invalid, try again. Choose a day"
     else:
         prompt = "Choose a day"
 
-    # send the info for this stage
+    #send the info for this stage
     sendJson(clientSocket, {
         "status": status,
         "state": "DAY",
@@ -350,20 +356,20 @@ def chooseDay(clientSocket, session, status="OK"):
         "back": True
     })
 
-    # get response
+    #get response
     request = receiveJson(clientSocket)
 
-    # if the client doesn't respond, assume to exit for safety reasons
+    #if the client doesn't respond, assume to exit for safety reasons
     if request is None:
         session["state"] = "EXIT"
         return
 
-    # this is for if the client wants to go back a step
+    #this is for if the client wants to go back a step
     if request.get("action") == "BACK":
         session["state"] = "MONTH"
         return
 
-    # this makes the variable choice the client's response.
+    #this makes the variable choice the client's response.
     choice = request.get("choice")
 
     if not isinstance(choice, int):
@@ -372,17 +378,17 @@ def chooseDay(clientSocket, session, status="OK"):
 
     if 1 <= choice <= len(days):
         selected = days[choice - 1]
-        session["selectedDay"] = selected
+        session["selectedDate"] = selected
         session["state"] = "TIME"
         return
 
     chooseDay(clientSocket, session, status="INPUT_ERROR")
 
 def chooseTimeSlot(clientSocket, session, status="OK"):
-    # this will be where the fetch function for the list of timeslots will happen, for now I use temp list
+    #this will be where the fetch function for the list of timeslots will happen, for now I use temp list
     timeSlots = temporaryTimeSlots
 
-    # gonna take the list, and append the list to have numbers for choosing.
+    #gonna take the list, and append the list to have numbers for choosing.
     options = []
     for i, slot in enumerate(timeSlots, start=1):
         options.append({
@@ -390,7 +396,7 @@ def chooseTimeSlot(clientSocket, session, status="OK"):
             "name": slot
         })
 
-    # determining prompt based off status.
+    #determining prompt based off status.
     if status == "INPUT_ERROR":
         if session.get("priority") == 3:
             prompt = "Input invalid, try again. Priority patient, choose an appointment time for today."
@@ -407,7 +413,7 @@ def chooseTimeSlot(clientSocket, session, status="OK"):
         else:
             prompt = "Choose a time slot and enter your info."
 
-    # send the info for this stage
+    #send the info for this stage
     sendJson(clientSocket, {
         "status": status,
         "state": "TIME",
@@ -416,15 +422,15 @@ def chooseTimeSlot(clientSocket, session, status="OK"):
         "back": True
     })
 
-    # get response
+    #get response
     request = receiveJson(clientSocket)
 
-    # if the client doesn't respond, assume to exit for safety reasons
+    #if the client doesn't respond, assume to exit for safety reasons
     if request is None:
         session["state"] = "EXIT"
         return
 
-    # this is for if the client wants to go back a step
+    #this is for if the client wants to go back a step
     if request.get("action") == "BACK":
         if session.get("priority") == 3:
             session["state"] = "DOCTOR"
@@ -432,7 +438,7 @@ def chooseTimeSlot(clientSocket, session, status="OK"):
             session["state"] = "DAY"
         return
 
-    # this makes the variable choice the client's response.
+    #this makes the variable choice the client's response.
     choice = request.get("choice")
 
     if not isinstance(choice, int):
@@ -462,11 +468,11 @@ def chooseTimeSlot(clientSocket, session, status="OK"):
     chosenTime = timeSlots[choice - 1]
 
     with bookingLock:
-        # this is where the booking of the time slot actually happens, can't do it without the read/write functions
-        # but here's the work flow:
-        # check again if the chosen time slot is still available
-        # if it's free call the write function that gives name, email, reason, and officially books the time slot.
-        # email confirmation could probably be called here too.
+        #this is where the booking of the time slot actually happens, can't do it without william's read/write functions
+        #but here's the work flow:
+        #check again if the chosen time slot is still available
+        #if it's free call the write function that gives name, email, reason, and officially books the time slot. 
+        #I think angel is doing an email confirmation function? so probably call that here as well. 
 
         bookingInfo = {
             "name": name.strip(),
@@ -476,7 +482,7 @@ def chooseTimeSlot(clientSocket, session, status="OK"):
             "priority": session.get("priority")
         }
 
-        # placeholder success response for now
+        #placeholder success response for now
         sendJson(clientSocket, {
             "status": "OK",
             "state": "CONFIRMATION",
@@ -484,7 +490,7 @@ def chooseTimeSlot(clientSocket, session, status="OK"):
             "details": {
                 "doctor": session["selectedDoctor"],
                 "month": session["selectedMonth"],
-                "day": session["selectedDay"],
+                "day": session["selectedDate"],
                 "time": chosenTime,
                 "priority": session.get("priority"),
                 "symptom": session.get("selectedSymptom"),
@@ -496,6 +502,8 @@ def chooseTimeSlot(clientSocket, session, status="OK"):
         })
 
         session["state"] = "EXIT"
+
+        pass
 
 if __name__ == "__main__":
     startServer()
