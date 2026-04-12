@@ -26,6 +26,8 @@ def receiveJson(clientSocket):
     message = data.decode().strip()
     return json.loads(message)
 
+def handleBack(clientSocket):
+    print("temp")
 
 def handleUser():
     #boolean statement for if client wants TTS or not. 
@@ -54,30 +56,104 @@ def handleUser():
 
     #general workflow loop. 
     while(True):
+        #PRINTING
+        #get the server's message
         serverResponse = receiveJson(clientSocket)
-        print(serverResponse.get("prompt"))
-        for option in serverResponse["options"]:
-            print(f'{option["id"]}. {option["name"]}')
 
-        if ttsToggle:
-            while True:
+        if serverResponse.get("state") == "CONFIRMATION":
+            print(serverResponse.get("prompt"))
+            if ttsToggle:
                 speak(serverResponse.get("prompt"))
+            break
+
+
+        while True:
+
+            #print's the server message
+            print(serverResponse.get("prompt"))
+            #print the options available. 
+            for option in serverResponse["options"]:
+                print(f'{option["id"]}. {option["name"]}')
+            #if back is enabled:
+            if serverResponse["back"] == True:
+                print("0. go back")
+            #if tts is on print:
+            if ttsToggle == True:
+                print("do you wish to repeat prompt? enter tilda if yes")
+        
+            #if text to speak is on, use this workflow. 
+
+            if ttsToggle:
+            #TTS
+                #speaks the server resopnse
+                speak(serverResponse.get("prompt"))
+            #speak each option
                 for option in serverResponse["options"]:
                     speak(f'{option["id"]}. {option["name"]}')
-                speak("if you wish to repeat? enter tilda if yes")
-                x = input()
-                if x == "`" or "~":
-                    continue
+                if serverResponse["back"] == True:
+                    speak("0. go back")
+            #add to the response, saying to enter tilda if you want the message to repeat
+                speak("do you wish to repeat prompt? enter tilda if yes")
+
+            userInput = input()
+                #if input is tilda, repeat the prompt and options. 
+            if userInput == "`" or userInput == "~":
+                continue
                 
+            if userInput == "0":
+                if serverResponse["back"] == True:
+                    sendJson(clientSocket, {
+                        "action": "BACK"
+                    })
+                    break
+                else:
+                    print("Back is not allowed in this menu")
+                    if ttsToggle:
+                        speak("Back is not allowed in this menu")
+            else:
+                try:
+                    userInput = int(userInput)
+                except ValueError:
+                    print("Answer was not an integer, please try again.")
+                    if ttsToggle:
+                        speak("Answer was not an integer, please try again.")
+                    continue
 
-        
+                if serverResponse.get("state") == "TIME":
+                    print("Enter your name")
+                    if ttsToggle:
+                        speak("Enter your name")
+                    name = input()
 
+                    print("Enter your email")
+                    if ttsToggle:
+                        speak("Enter your email")
+                    email = input()
 
-        
-        
+                    print("Enter the reason for your appointment")
+                    if ttsToggle:
+                        speak("Enter the reason for your appointment")
+                    reason = input()
+
+                    sendJson(clientSocket, {
+                        "choice": userInput,
+                        "name": name,
+                        "email": email,
+                        "reason": reason
+                    })
+                else:
+                    sendJson(clientSocket, {
+                        "choice": userInput
+                    })
+
+                break
             
-    
-    
+            
+
+
+
+                #if input 
+
 def speak(text):
     engine = pyttsx3.init()
     engine.say(text)
