@@ -1,6 +1,8 @@
 import socket
 import threading
 import json
+from JsonWriteRead import getDoctorList, getDoctorMonths, getMonthDays, getTimeSlots, getTodayTimeSlots, isTimeSlotAvailable, bookAppointment
+from datetime import datetime
 
 #this is a mutex lock (learned about it in operating systems). It's the tool used to stop race conditions.
 bookingLock = threading.Lock()
@@ -207,7 +209,7 @@ def chooseSymptom(clientSocket, session, status="OK"):
 
 def chooseDoctor(clientSocket, session, status="OK"):
     #this will be where the fetch function for the list of doctors will happen, for now I use temp list
-    doctors = temporaryDoctors
+    doctors = getDoctorList()
 
     #gonna take the list, and append the list to have numbers for choosing.
     options = []
@@ -258,8 +260,6 @@ def chooseDoctor(clientSocket, session, status="OK"):
 
         # priority 3 patients skip month/day and go straight to today
         if session.get("priority") == 3:
-            session["selectedMonth"] = temporaryMonths[0]
-            session["selectedDate"] = temporaryDays[0]
             session["state"] = "TIME"
         else:
             session["state"] = "MONTH"
@@ -269,7 +269,7 @@ def chooseDoctor(clientSocket, session, status="OK"):
 
 def chooseMonth(clientSocket, session, status="OK"):
     #this will be where the fetch function for the list of months will happen, for now I use temp list
-    months = temporaryMonths
+    months = getDoctorMonths(session["selectedDoctor"])
 
     #priority 1 patients must book at least a month out
     if session.get("priority") == 1:
@@ -331,7 +331,7 @@ def chooseMonth(clientSocket, session, status="OK"):
 
 def chooseDay(clientSocket, session, status="OK"):
     #this will be where the fetch function for the list of days will happen, for now I use temp list
-    days = temporaryDays
+    days = getMonthDays(session["selectedDoctor"], session["selectedMonth"])
 
     #gonna take the list, and append the list to have numbers for choosing.
     options = []
@@ -385,8 +385,11 @@ def chooseDay(clientSocket, session, status="OK"):
     chooseDay(clientSocket, session, status="INPUT_ERROR")
 
 def chooseTimeSlot(clientSocket, session, status="OK"):
-    #this will be where the fetch function for the list of timeslots will happen, for now I use temp list
-    timeSlots = temporaryTimeSlots
+    if session.get("priority") == 3:
+        timeSlots = getTodayTimeSlots(session["selectedDoctor"])
+    else:
+        #this will be where the fetch function for the list of timeslots will happen, for now I use temp list
+        timeSlots = getTimeSlots(session["selectedDoctor"], session["selectedMonth"], session["selectedDate"])
 
     #gonna take the list, and append the list to have numbers for choosing.
     options = []
@@ -467,20 +470,34 @@ def chooseTimeSlot(clientSocket, session, status="OK"):
 
     chosenTime = timeSlots[choice - 1]
 
-    with bookingLock:
-        #this is where the booking of the time slot actually happens, can't do it without william's read/write functions
-        #but here's the work flow:
-        #check again if the chosen time slot is still available
-        #if it's free call the write function that gives name, email, reason, and officially books the time slot. 
-        #I think angel is doing an email confirmation function? so probably call that here as well. 
-
-        bookingInfo = {
+    #formating information
+    bookingInfo = {
             "name": name.strip(),
             "email": email.strip(),
             "reason": reason.strip(),
             "symptom": session.get("selectedSymptom"),
             "priority": session.get("priority")
         }
+    
+    #setting the session's choices if priority three so that the check if the slot is still free for race condition can use.
+    if session.get("priority") == 3:
+        today = datetime.today()
+        session["selectedMonth"] = today.strftime("%B")
+        session["selectedDate"] = str(today.day)
+
+    #the mutex lock to stop race conditions
+    with bookingLock:
+        #check to make sure that the appointment slot is still availab.e
+        if not isTimeSlotAvailable(session["selectedDoctor"], session["selectedMonth"], session["selectedDate"], chosenTime):
+            chooseTimeSlot(clientSocket, session, status="TAKEN")
+            return
+        
+        #if the time slot isn't taken, book.
+        bookAppointment(session["selectedDoctor"], session["selectedMonth"], session["selectedDate"], chosenTime, bookingInfo )
+        
+        
+
+        
 
         #placeholder success response for now
         sendJson(clientSocket, {
