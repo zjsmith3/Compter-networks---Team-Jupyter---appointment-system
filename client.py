@@ -1,6 +1,7 @@
 import socket
 import pyttsx3
 import json
+import time
 
 HOST = "127.0.0.1"
 PORT = 5000
@@ -58,7 +59,12 @@ def handleUser():
     while(True):
         #PRINTING
         #get the server's message
+        startTime = time.time()
         serverResponse = receiveJson(clientSocket)
+        endTime = time.time()
+
+        print(f"[DEBUG] response received in {endTime - startTime: .4f} seconds")
+
 
         if serverResponse.get("state") == "CONFIRMATION":
             print(serverResponse.get("prompt"))

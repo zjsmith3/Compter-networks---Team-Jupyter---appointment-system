@@ -54,8 +54,11 @@ def getTodayTimeSlots(doctor):
     if day not in saveFile[doctor][month]:
         return []
 
-
-    return list(saveFile[doctor][month][day].keys())
+    available = []
+    for time, value in saveFile[doctor][month][day].items():
+        if value is None:
+            available.append(time)
+    return available
 
 def isTimeSlotAvailable(doctor, month, day, time):
     return saveFile[doctor][month][day][time] is None
