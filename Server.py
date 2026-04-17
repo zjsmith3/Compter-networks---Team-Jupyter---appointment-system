@@ -8,6 +8,7 @@ from datetime import datetime
 bookingLock = threading.Lock()
 
 HOST = "127.0.0.1"
+#HOST = "0.0.0.0"
 PORT = 5000
 
 temporaryDoctors = ["Jane doe", "John Doe", "Sarah Smith"]
@@ -479,42 +480,52 @@ def chooseTimeSlot(clientSocket, session, status="OK"):
         session["selectedMonth"] = today.strftime("%B")
         session["selectedDate"] = str(today.day)
 
+    slotTaken = False
+
     #the mutex lock to stop race conditions
     with bookingLock:
-        #check to make sure that the appointment slot is still availab.e
-        if not isTimeSlotAvailable(session["selectedDoctor"], session["selectedMonth"], session["selectedDate"], chosenTime):
-            chooseTimeSlot(clientSocket, session, status="TAKEN")
-            return
-        
-        #if the time slot isn't taken, book.
-        bookAppointment(session["selectedDoctor"], session["selectedMonth"], session["selectedDate"], chosenTime, bookingInfo )
-        
-        
+        #check to make sure that the appointment slot is still available
+        if not isTimeSlotAvailable(
+            session["selectedDoctor"],
+            session["selectedMonth"],
+            session["selectedDate"],
+            chosenTime
+        ):
+            slotTaken = True
+        else:
+            #if the time slot isn't taken, book.
+            bookAppointment(
+                session["selectedDoctor"],
+                session["selectedMonth"],
+                session["selectedDate"],
+                chosenTime,
+                bookingInfo
+            )
 
-        
+    if slotTaken:
+        chooseTimeSlot(clientSocket, session, status="TAKEN")
+        return
 
-        #placeholder success response for now
-        sendJson(clientSocket, {
-            "status": "OK",
-            "state": "CONFIRMATION",
-            "prompt": "Appointment booked successfully.",
-            "details": {
-                "doctor": session["selectedDoctor"],
-                "month": session["selectedMonth"],
-                "day": session["selectedDate"],
-                "time": chosenTime,
-                "priority": session.get("priority"),
-                "symptom": session.get("selectedSymptom"),
-                "name": bookingInfo["name"],
-                "email": bookingInfo["email"],
-                "reason": bookingInfo["reason"]
-            },
-            "back": False
-        })
+    #placeholder success response for now
+    sendJson(clientSocket, {
+        "status": "OK",
+        "state": "CONFIRMATION",
+        "prompt": "Appointment booked successfully.",
+        "details": {
+            "doctor": session["selectedDoctor"],
+            "month": session["selectedMonth"],
+            "day": session["selectedDate"],
+            "time": chosenTime,
+            "priority": session.get("priority"),
+            "symptom": session.get("selectedSymptom"),
+            "name": bookingInfo["name"],
+            "email": bookingInfo["email"],
+            "reason": bookingInfo["reason"]
+        },
+        "back": False
+    })
 
-        session["state"] = "EXIT"
-
-        pass
+    session["state"] = "EXIT"
 
 if __name__ == "__main__":
     startServer()
