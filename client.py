@@ -5,7 +5,7 @@ import json
 HOST = "127.0.0.1"
 PORT = 5000
 
-#THIS IS NOT DONE!!!!!!!!
+
 
 #This is a function used for sending json files to the client
 def sendJson(clientSocket, messageFile):
@@ -17,7 +17,7 @@ def receiveJson(clientSocket):
     data = b""
 
     while b"\n" not in data:
-        # this loop takes in chunks of data until the end of the message.
+        #this loop takes in chunks of data until the end of the message.
         chunk = clientSocket.recv(4096)
         if not chunk:
             return None
