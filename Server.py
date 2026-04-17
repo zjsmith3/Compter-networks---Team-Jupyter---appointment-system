@@ -63,13 +63,7 @@ def handleClient(clientSocket, clientAddress):
         "selectedMonth": None,  #memory spot for chosen month for fetch function purposes
         "selectedDate": None  #memory spot for chosen day for fetch function purposes
     }
-    session = {
-        "state": "START",  #the state the client is currently in
-        "selectedDoctor": None,  #memory spot for chosen doctor for fetch function purposes
-        "selectedMonth": None,  #memory spot for chosen month for fetch function purposes
-        "selectedDay": None #memory spot for chosen date for fetch function purposes
-        
-    }
+    
 
     try:
         while True:
