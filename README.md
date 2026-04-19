@@ -58,6 +58,20 @@ If a user attempts to reserve a slot that has already been taken, the server wil
 
 ---
 
+## Testing
+
+This project uses pytest for automated testing of the server-client workflow.
+The tests validate:
+
+- State transitions
+- Input validation and error handling
+- Back navigation functionality
+- Partial booking flow
+- Multi-client concurrency handling
+
+---
+
+
 ## Educational Purpose
 
 This project demonstrates several important networking and software design concepts:
