@@ -31,6 +31,15 @@ temporarySymptoms = [
     {"name": "Severe allergic reaction", "priority": 3},
 ]
 
+# client_id identifies which client is sending, role is server or client, message shows whats happening in the system
+def log(client_id, sender, message):
+    if sender == "SERVER":
+        print(f"[SERVER] {client_id} | {message}")
+    elif sender == "CLIENT":
+        print(f"[CLIENT] {client_id} | {message}")
+    else:
+        print(f"[{sender}] {client_id} | {message}")
+
 def startServer():
     #This creates the server socket
     serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -56,6 +65,11 @@ def startServer():
         clientThread.start()
 
 def handleClient(clientSocket, clientAddress):
+
+    # client_id identifies each connected clients.
+    client_id = f"{clientAddress[0]}:{clientAddress[1]}"
+    log(client_id, "SERVER", "Client connected successfully")
+
     session = {
         "state": "START",  #the state the client is currently in
         "selectedSymptom": None,  #memory spot for chosen symptom
@@ -72,17 +86,17 @@ def handleClient(clientSocket, clientAddress):
 
             # depending on the current state of the program, it will call that function
             if state == "START":
-                startState(clientSocket, session)
+                startState(clientSocket, session, client_id)
             elif state == "SYMPTOM":
-                chooseSymptom(clientSocket, session)
+                chooseSymptom(clientSocket, session, client_id)
             elif state == "DOCTOR":
-                chooseDoctor(clientSocket, session)
+                chooseDoctor(clientSocket, session, client_id)
             elif state == "MONTH":
-                chooseMonth(clientSocket, session)
+                chooseMonth(clientSocket, session, client_id)
             elif state == "DAY":
-                chooseDay(clientSocket, session)
+                chooseDay(clientSocket, session, client_id)
             elif state == "TIME":
-                chooseTimeSlot(clientSocket, session)
+                chooseTimeSlot(clientSocket, session ,client_id)
             elif state == "EXIT":
                 break
             else:
@@ -110,13 +124,16 @@ def receiveJson(clientSocket):
     message = data.decode().strip()
     return json.loads(message)
 
-def startState(clientSocket, session, status="OK"):
+def startState(clientSocket, session, client_id, status="OK"):
 
     # determining prompt based off status.
     if status == "INPUT_ERROR":
         prompt = "Input invalid, try again. What would you like to do?"
     else:
         prompt = "Welcome, what would you like to do?"
+
+    log(client_id, "SERVER", f"State = START | Status = {status}")
+    log(client_id, "SERVER", "Sending menu options to client")
 
     #send the info for this stage
     sendJson(clientSocket, {
@@ -134,20 +151,26 @@ def startState(clientSocket, session, status="OK"):
 
     #if the client doesn't respond, assume to exit for safety reasons
     if request == None:
+        log(client_id, "CLIENT", "Disconnected")
         session["state"] = "EXIT"
         return
 
     #this makes the variable choice the client's response.
     choice = request.get("choice")
 
+    log(client_id, "CLIENT", f"Menu choice = {choice}")
+
     if choice == 1:
+        log(client_id, "SERVER", "Moving to SYMPTOM state")
         session["state"] = "SYMPTOM"
     elif choice == 2:
+        log(client_id, "SERVER", "Client exited system")
         session["state"] = "EXIT"
     else:
+        log(client_id, "SERVER", "Invalid menu input")
         startState(clientSocket, session, status="INPUT_ERROR")
 
-def chooseSymptom(clientSocket, session, status="OK"):
+def chooseSymptom(clientSocket, session, client_id, status="OK"):
     symptoms = temporarySymptoms
 
     #gonna take the list, and append the list to have numbers for choosing. 
@@ -164,6 +187,8 @@ def chooseSymptom(clientSocket, session, status="OK"):
     else:
         prompt = "Choose the option closest to what you are experiencing."
 
+    log(client_id, "SERVER", "Sending symptom selection menu to client")
+
     #send the info for this stage
     sendJson(clientSocket, {
         "status": status,
@@ -178,18 +203,23 @@ def chooseSymptom(clientSocket, session, status="OK"):
 
     # if the client doesn't respond, assume to exit for safety reasons
     if request is None:
+        log(client_id, "CLIENT", "Disconnected")
         session["state"] = "EXIT"
         return
 
     #this is for if the client wants to go back a step
     if request.get("action") == "BACK":
+        log(client_id, "CLIENT", "Pressed BACK")
         session["state"] = "START"
         return
 
     #this makes the variable choice the client's response.
     choice = request.get("choice")
 
+    log(client_id, "CLIENT", f"Selected option: {choice}")
+
     if not isinstance(choice, int):
+        log(client_id, "SERVER", "Invalid input type received")
         chooseSymptom(clientSocket, session, status="INPUT_ERROR")
         return
 
@@ -197,12 +227,16 @@ def chooseSymptom(clientSocket, session, status="OK"):
         selected = symptoms[choice - 1]
         session["selectedSymptom"] = selected["name"]
         session["priority"] = selected["priority"]
+
+        log(client_id, "SERVER", f"Symptom selected: {selected['name']} | Priority {selected['priority']}")
+
         session["state"] = "DOCTOR"
         return
 
+    log(client_id, "SERVER", "Choice out of range")
     chooseSymptom(clientSocket, session, status="INPUT_ERROR")
 
-def chooseDoctor(clientSocket, session, status="OK"):
+def chooseDoctor(clientSocket, session, client_id, status="OK"):
     #this will be where the fetch function for the list of doctors will happen, for now I use temp list
     doctors = getDoctorList()
 
@@ -220,7 +254,7 @@ def chooseDoctor(clientSocket, session, status="OK"):
     else:
         prompt = "Choose a doctor"
 
-    #send the info for this stage
+    log(client_id, "SERVER", f"Doctor = {session['selectedDoctor']}")    #send the info for this stage
     sendJson(clientSocket, {
         "status": status,
         "state": "DOCTOR",
@@ -239,11 +273,13 @@ def chooseDoctor(clientSocket, session, status="OK"):
 
     #this is for if the client wants to go back a step
     if request.get("action") == "BACK":
+        log(client_id, "CLIENT", "BACK to symptom")
         session["state"] = "SYMPTOM"
         return
 
     #this makes the variable choice the client's response.
     choice = request.get("choice")
+    log(client_id, "CLIENT", f"Doctor selected index = {choice}")
 
     if not isinstance(choice, int):
         chooseDoctor(clientSocket, session, status="INPUT_ERROR")
@@ -251,6 +287,9 @@ def chooseDoctor(clientSocket, session, status="OK"):
 
     if 1 <= choice <= len(doctors):
         selected = doctors[choice - 1]
+
+        log(client_id, "SERVER", f"Doctor = {session['selectedDoctor']}")
+
         session["selectedDoctor"] = selected
 
         # priority 3 patients skip month/day and go straight to today
@@ -262,7 +301,7 @@ def chooseDoctor(clientSocket, session, status="OK"):
 
     chooseDoctor(clientSocket, session, status="INPUT_ERROR")
 
-def chooseMonth(clientSocket, session, status="OK"):
+def chooseMonth(clientSocket, session, client_id, status="OK"):
     #this will be where the fetch function for the list of months will happen, for now I use temp list
     months = getDoctorMonths(session["selectedDoctor"])
 
@@ -287,6 +326,7 @@ def chooseMonth(clientSocket, session, status="OK"):
         else:
             prompt = "Choose a month"
 
+    log(client_id, "SERVER", "Sending month selection")
     #send the info for this stage
     sendJson(clientSocket, {
         "status": status,
@@ -311,6 +351,7 @@ def chooseMonth(clientSocket, session, status="OK"):
 
     #this makes the variable choice the client's response.
     choice = request.get("choice")
+    log(client_id, "CLIENT", f"Month selected index = {choice}")
 
     if not isinstance(choice, int):
         chooseMonth(clientSocket, session, status="INPUT_ERROR")
@@ -324,7 +365,7 @@ def chooseMonth(clientSocket, session, status="OK"):
 
     chooseMonth(clientSocket, session, status="INPUT_ERROR")
 
-def chooseDay(clientSocket, session, status="OK"):
+def chooseDay(clientSocket, session, client_id, status="OK"):
     #this will be where the fetch function for the list of days will happen, for now I use temp list
     days = getMonthDays(session["selectedDoctor"], session["selectedMonth"])
 
@@ -342,6 +383,7 @@ def chooseDay(clientSocket, session, status="OK"):
     else:
         prompt = "Choose a day"
 
+    log(client_id, "SERVER", "Sending day selection")
     #send the info for this stage
     sendJson(clientSocket, {
         "status": status,
@@ -366,6 +408,7 @@ def chooseDay(clientSocket, session, status="OK"):
 
     #this makes the variable choice the client's response.
     choice = request.get("choice")
+    log(client_id, "CLIENT", f"Day selected index = {choice}")
 
     if not isinstance(choice, int):
         chooseDay(clientSocket, session, status="INPUT_ERROR")
@@ -379,7 +422,7 @@ def chooseDay(clientSocket, session, status="OK"):
 
     chooseDay(clientSocket, session, status="INPUT_ERROR")
 
-def chooseTimeSlot(clientSocket, session, status="OK"):
+def chooseTimeSlot(clientSocket, session, client_id, status="OK"):
     if session.get("priority") == 3:
         timeSlots = getTodayTimeSlots(session["selectedDoctor"])
     else:
@@ -411,6 +454,7 @@ def chooseTimeSlot(clientSocket, session, status="OK"):
         else:
             prompt = "Choose a time slot and enter your info."
 
+    log(client_id, "SERVER", "Sending time slots")
     #send the info for this stage
     sendJson(clientSocket, {
         "status": status,
@@ -438,6 +482,7 @@ def chooseTimeSlot(clientSocket, session, status="OK"):
 
     #this makes the variable choice the client's response.
     choice = request.get("choice")
+    log(client_id, "CLIENT", f"Time slot selected = {choice}")
 
     if not isinstance(choice, int):
         chooseTimeSlot(clientSocket, session, status="INPUT_ERROR")
