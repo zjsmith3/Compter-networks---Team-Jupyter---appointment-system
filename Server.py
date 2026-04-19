@@ -11,14 +11,9 @@ HOST = "127.0.0.1"
 #HOST = "0.0.0.0"
 PORT = 5000
 
-temporaryDoctors = ["Jane doe", "John Doe", "Sarah Smith"]
-temporaryMonths = ["April", "May", "June", "July"]
-temporaryDays = [str(i) for i in range(1, 31)]
-temporaryTimeSlots = ["08:00", "10:00", "12:00"]
 
-# temporary symptom list for testing.
-# later you can change the names or priorities without changing the rest of the workflow.
-temporarySymptoms = [
+# symptoms list of 10 symptoms that the patient can choose the closest from to set priority. 
+symptomsList = [
     {"name": "Routine checkup", "priority": 1},
     {"name": "Medication refill", "priority": 1},
     {"name": "Mild cold symptoms", "priority": 2},
@@ -148,7 +143,7 @@ def startState(clientSocket, session, status="OK"):
         startState(clientSocket, session, status="INPUT_ERROR")
 
 def chooseSymptom(clientSocket, session, status="OK"):
-    symptoms = temporarySymptoms
+    symptoms = symptomsList
 
     #gonna take the list, and append the list to have numbers for choosing. 
     options = []
