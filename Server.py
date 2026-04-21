@@ -163,7 +163,7 @@ def startState(clientSocket, session, client_id, status="OK"):
         session["state"] = "EXIT"
     else:
         log(client_id, "SERVER", "Invalid menu input")
-        startState(clientSocket, session, status="INPUT_ERROR")
+        startState(clientSocket, session, client_id, status="INPUT_ERROR")
 
 def chooseSymptom(clientSocket, session, client_id, status="OK"):
     symptoms = symptomsList
@@ -215,7 +215,7 @@ def chooseSymptom(clientSocket, session, client_id, status="OK"):
 
     if not isinstance(choice, int):
         log(client_id, "SERVER", "Invalid input type received")
-        chooseSymptom(clientSocket, session, status="INPUT_ERROR")
+        chooseSymptom(clientSocket, session, client_id, status="INPUT_ERROR")
         return
 
     if 1 <= choice <= len(symptoms):
@@ -229,7 +229,7 @@ def chooseSymptom(clientSocket, session, client_id, status="OK"):
         return
 
     log(client_id, "SERVER", "Choice out of range")
-    chooseSymptom(clientSocket, session, status="INPUT_ERROR")
+    chooseSymptom(clientSocket, session, client_id, status="INPUT_ERROR")
 
 def chooseDoctor(clientSocket, session, client_id, status="OK"):
     #this will be where the fetch function for the list of doctors will happen, for now I use temp list
@@ -277,7 +277,7 @@ def chooseDoctor(clientSocket, session, client_id, status="OK"):
     log(client_id, "CLIENT", f"Doctor selected index = {choice}")
 
     if not isinstance(choice, int):
-        chooseDoctor(clientSocket, session, status="INPUT_ERROR")
+        chooseDoctor(clientSocket, session, client_id, status="INPUT_ERROR")
         return
 
     if 1 <= choice <= len(doctors):
@@ -294,7 +294,7 @@ def chooseDoctor(clientSocket, session, client_id, status="OK"):
             session["state"] = "MONTH"
         return
 
-    chooseDoctor(clientSocket, session, status="INPUT_ERROR")
+    chooseDoctor(clientSocket, session, client_id, status="INPUT_ERROR")
 
 def chooseMonth(clientSocket, session, client_id, status="OK"):
     #this will be where the fetch function for the list of months will happen, for now I use temp list
@@ -349,7 +349,7 @@ def chooseMonth(clientSocket, session, client_id, status="OK"):
     log(client_id, "CLIENT", f"Month selected index = {choice}")
 
     if not isinstance(choice, int):
-        chooseMonth(clientSocket, session, status="INPUT_ERROR")
+        chooseMonth(clientSocket, session, client_id, status="INPUT_ERROR")
         return
 
     if 1 <= choice <= len(months):
@@ -358,7 +358,7 @@ def chooseMonth(clientSocket, session, client_id, status="OK"):
         session["state"] = "DAY"
         return
 
-    chooseMonth(clientSocket, session, status="INPUT_ERROR")
+    chooseMonth(clientSocket, session, client_id, status="INPUT_ERROR")
 
 def chooseDay(clientSocket, session, client_id, status="OK"):
     #this will be where the fetch function for the list of days will happen, for now I use temp list
@@ -406,7 +406,7 @@ def chooseDay(clientSocket, session, client_id, status="OK"):
     log(client_id, "CLIENT", f"Day selected index = {choice}")
 
     if not isinstance(choice, int):
-        chooseDay(clientSocket, session, status="INPUT_ERROR")
+        chooseDay(clientSocket, session, client_id, status="INPUT_ERROR")
         return
 
     if 1 <= choice <= len(days):
@@ -415,7 +415,7 @@ def chooseDay(clientSocket, session, client_id, status="OK"):
         session["state"] = "TIME"
         return
 
-    chooseDay(clientSocket, session, status="INPUT_ERROR")
+    chooseDay(clientSocket, session, client_id, status="INPUT_ERROR")
 
 def chooseTimeSlot(clientSocket, session, client_id, status="OK"):
     if session.get("priority") == 3:
@@ -480,11 +480,11 @@ def chooseTimeSlot(clientSocket, session, client_id, status="OK"):
     log(client_id, "CLIENT", f"Time slot selected = {choice}")
 
     if not isinstance(choice, int):
-        chooseTimeSlot(clientSocket, session, status="INPUT_ERROR")
+        chooseTimeSlot(clientSocket, session, client_id, status="INPUT_ERROR")
         return
 
     if not (1 <= choice <= len(timeSlots)):
-        chooseTimeSlot(clientSocket, session, status="INPUT_ERROR")
+        chooseTimeSlot(clientSocket, session, client_id, status="INPUT_ERROR")
         return
 
     name = request.get("name")
@@ -492,15 +492,15 @@ def chooseTimeSlot(clientSocket, session, client_id, status="OK"):
     reason = request.get("reason")
 
     if not isinstance(name, str) or not name.strip():
-        chooseTimeSlot(clientSocket, session, status="INPUT_ERROR")
+        chooseTimeSlot(clientSocket, session, client_id, status="INPUT_ERROR")
         return
 
     if not isinstance(email, str) or not email.strip():
-        chooseTimeSlot(clientSocket, session, status="INPUT_ERROR")
+        chooseTimeSlot(clientSocket, session, client_id, status="INPUT_ERROR")
         return
 
     if not isinstance(reason, str) or not reason.strip():
-        chooseTimeSlot(clientSocket, session, status="INPUT_ERROR")
+        chooseTimeSlot(clientSocket, session, client_id, status="INPUT_ERROR")
         return
 
     chosenTime = timeSlots[choice - 1]
@@ -543,7 +543,7 @@ def chooseTimeSlot(clientSocket, session, client_id, status="OK"):
             )
 
     if slotTaken:
-        chooseTimeSlot(clientSocket, session, status="TAKEN")
+        chooseTimeSlot(clientSocket, session, client_id, status="TAKEN")
         return
 
     #placeholder success response for now

@@ -195,7 +195,13 @@
                     "symptom": "Mild cold symptoms",
                     "priority": 2
                 },
-                "10:00": null,
+                "10:00": {
+                    "name": "zach",
+                    "email": "email",
+                    "reason": "reason",
+                    "symptom": "Routine checkup",
+                    "priority": 1
+                },
                 "12:00": null,
                 "14:00": null,
                 "16:00": {
@@ -1858,7 +1864,13 @@
                 "16:00": null
             },
             "5": {
-                "08:00": null,
+                "08:00": {
+                    "name": "zach",
+                    "email": "email",
+                    "reason": "reason",
+                    "symptom": "Routine checkup",
+                    "priority": 1
+                },
                 "10:00": {
                     "name": "Reese Clark",
                     "email": "reese.clark@gmail.com",
