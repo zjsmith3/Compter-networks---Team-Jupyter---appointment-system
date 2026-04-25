@@ -97,10 +97,16 @@ This system can be expanded with additional features, such as:
 
 ---
 
+## How to run
+
+1. Make sure all extensions are installed that are used in the scripts. 
+2. On one terminal. Run the server.py script.
+3. On another terminal, run the client.py script. 
+
 ## Team Members
 
+- Zachary Smith  
 - Angel Paul Antipolo  
 - William Dawson  
 - Estefania Ramirez  
-- Zachary Smith  
 - Tugba Agdas  
